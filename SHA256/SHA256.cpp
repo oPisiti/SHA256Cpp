@@ -2,6 +2,7 @@
 #include <string>
 #include <bitset>
 #include <vector>
+#include <cmath>
 
 uint32_t rightRotate(uint32_t num, int nTimes) {
     return (num >> nTimes) | (num << (sizeof(num) * 8 - nTimes));
@@ -10,15 +11,11 @@ uint32_t rightRotate(uint32_t num, int nTimes) {
 void SHA256(std::string mes) {
     // Based on https://qvault.io/cryptography/how-sha-2-works-step-by-step-sha-256/
     uint64_t sizeMessageBits = mes.size() * 8;
-    size_t sizeHash = ((sizeMessageBits - 64) / 512 + 1) * 64;
+    size_t sizeHash = ceil((sizeMessageBits + 64.0f) / 512) * 64;
     std::vector<unsigned char> hash;                                        // Each char is an 8 bit word
     hash.reserve(sizeHash);   
 
-    std::cout << "sizeHash: " << sizeHash << std::endl;
-
     for (size_t i = 0; i < sizeHash; i++)  hash.push_back(0x00);                  // Setting all bits to 0
-    //std::cout << "Hash size: " << hash.size() << std::endl;
-    //std::cout << "Mes size: " << mes.size() << std::endl;
 
     // 1 - Pre-processing
     for (std::size_t i = 0; i < mes.size(); i++) {
@@ -229,7 +226,9 @@ int main(){
 
 
     std::cout << "Hashing ... " << std::endl;*/
-    message = "hello world";
-    //message = "In the case of an infinitesimally small elastic sphere, the effect of a tidal force is to distort the shape of the body without any change in volume.The sphere becomes an ellipsoid with two bulges, pointing towardsand away from the other body.Larger objects distort into an ovoid, and are slightly compressed, which is what happens to the Earth's oceans under the action of the Moon. The Earth and Moon rotate about their common center of mass or barycenter, and their gravitational attraction provides the centripetal force necessary to maintain this motion. To an observer on the Earth, very close to this barycenter, the situation is one of the Earth as body 1 acted upon by the gravity of the Moon as body 2. All parts of the Earth are subject to the Moon's gravitational forces, causing the water in the oceans to redistribute, forming bulges on the sides near the Moonand far from the Moon.";
+    //message = "hello world";
+    //message = "hello worldddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd";
+    //message = "In the case of an infinitesimally small elastic sphere, the effect of a tidal force is to distort the shape of the body without any change in volume. The sphere becomes an ellipsoid with two bulges, pointing towards and away from the other body. Larger objects distort into an ovoid, and are slightly compressed, which is what happens to the Earth's oceans under the action of the Moon. The Earth and Moon rotate about their common center of mass or barycenter, and their gravitational attraction provides the centripetal force necessary to maintain this motion. To an observer on the Earth, very close to this barycenter, the situation is one of the Earth as body 1 acted upon by the gravity of the Moon as body 2. All parts of the Earth are subject to the Moon's gravitational forces, causing the water in the oceans to redistribute, forming bulges on the sides near the Moon and far from the Moon.";
+    message = "Maecenas lacus nulla, fermentum sed dapibus eget, aliquam id augue. In volutpat sit amet tortor quis auctor. Curabitur id sem vitae nisl pulvinar cursus. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Duis ligula dolor, laoreet ut turpis consectetur, tincidunt facilisis eros. Quisque vel tellus et lorem egestas volutpat eget eget tortor. Etiam blandit massa non viverra semper. Vestibulum et augue et lacus eleifend commodo. Phasellus mattis sed dui non commodo. Nam euismod volutpat lectus, a volutpat metus hendrerit eu. Cras arcu magna, vehicula eu lacus quis, accumsan congue velit. Curabitur volutpat eleifend nulla, gravida volutpat erat tincidunt eu. Aenean gravida purus non hendrerit elementum. Nam vitae dictum mi, quis semper diam. Donec commodo, turpis nec eleifend sagittis, dui quam aliquam risus, ut rhoncus mi enim vel velit.";
     SHA256(message);
 }
