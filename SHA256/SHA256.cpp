@@ -110,7 +110,7 @@ void SHA256(std::string mes) {
         h7 = h7 + h;
     }
 
-    printf("Final Hash: %x%x%x%x%x%x%x%x", h0, h1, h2, h3, h4, h5, h6, h7);
+    printf("%x%x%x%x%x%x%x%x", h0, h1, h2, h3, h4, h5, h6, h7);
 
     //return hash;
 }
