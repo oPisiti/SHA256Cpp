@@ -18,12 +18,8 @@ void SHA256(std::string mes) {
     for (size_t i = 0; i < sizeHash; i++)  hash.push_back(0x00);                  // Setting all bits to 0
 
     // 1 - Pre-processing
-    for (std::size_t i = 0; i < mes.size(); i++) {
-        //std::cout << "Index: " << i;
-        hash[i] = mes[i];
-    }
+    for (std::size_t i = 0; i < mes.size(); i++)        hash[i] = mes[i];
     hash[mes.size()] = 0x80;
-    //std::cout << "sizeMessageBits: " << std::bitset<64>(sizeMessageBits) << std::endl;
     
     // How many relevant bits in sizeMessageBits
     unsigned nSizeMessageBits, var = sizeMessageBits;
@@ -35,12 +31,6 @@ void SHA256(std::string mes) {
     // Writing the binary sizeMessageBits into has array. If sizeMessageBits (binary) takes up more than 8 bits, the 9th onwards
     // must be written in hash[-1] position. Done with bitshifting 8*i each time
     for (int i = 0; i < charPositions; i++) hash[sizeHash - i - 1] = sizeMessageBits >> 8 * i ;
-
-    /*std::cout << "Hash Step 1: " << std::endl;
-    for (size_t i = 0; i < 64; i++) {
-        std::cout << std::bitset<8>(hash[i]) << " ";
-    }
-    std::cout << std::endl;*/
 
     // 2 - Initialize Hash Values (h)
     uint32_t h0 = 0x6a09e667;
@@ -64,21 +54,13 @@ void SHA256(std::string mes) {
 
      // 4 – Chunk Loop
     for (size_t chunk = 0; chunk < sizeHash / 64; chunk++) {
-        std::cout << "Chunk: " << chunk << std::endl;
+
         // 5 – Create Message Schedule (w)
         uint32_t w[64];
      
         uint32_t j = chunk * 64;
-        for (size_t i = 0; i < 16; i++) {
-            w[i] = (hash[j + 4 * i] << 24) | (hash[j + 4 * i + 1] << 16) | (hash[j + 4 * i + 2] << 8) | hash[j + 4 * i + 3];
-            //std::cout << "hash[4 * i + 3]: " << std::bitset<32>(hash[4 * i + 3]) << std::endl;
-            /*std::cout << "hash[4 * i] << 24:     " << std::bitset<32>(hash[4 * i] << 24) << std::endl;
-            std::cout << "hash[4 * i + 1] << 16: " << std::bitset<32>(hash[4 * i + 1] << 16) << std::endl;
-            std::cout << "hash[4 * i + 2] << 8:  " << std::bitset<32>(hash[4 * i + 2] << 8) << std::endl;
-            std::cout << "hash[4 * i + 3]:       " << std::bitset<32>(hash[4 * i + 3]) << std::endl;
-            std::cout << "w[i]:                  " << std::bitset<32>(w[i]) << std::endl << std::endl;*/
-        }
-        for (size_t i = 16; i < 64; i++)  w[i] = 0x00;    // Setting all bits to 0
+        for (size_t i = 0; i < 16; i++) w[i] = (hash[j + 4 * i] << 24) | (hash[j + 4 * i + 1] << 16) | (hash[j + 4 * i + 2] << 8) | hash[j + 4 * i + 3];
+        for (size_t i = 16; i < 64; i++)  w[i] = 0x00;              // Setting all other bits to 0
 
         uint32_t s0, s1;
         for (int i = 16; i < 64; i++) {
@@ -86,12 +68,6 @@ void SHA256(std::string mes) {
             s1 = rightRotate(w[i - 2], 17) ^ rightRotate(w[i - 2], 19) ^ (w[i - 2] >> 10);
             w[i] = w[i - 16] + s0 + w[i - 7] + s1;
         }
-
-       /*std::cout << "w: " << std::endl;
-        for (size_t i = 0; i < 64; i++) {
-            std::cout << std::bitset<32>(w[i]) << " ";
-        }
-        std::cout << std::endl;*/
 
         // 6 – Compression
         uint32_t a = h0;
@@ -103,24 +79,9 @@ void SHA256(std::string mes) {
         uint32_t g = h6;
         uint32_t h = h7;
 
-        /*std::cout << "a: " << std::bitset<32>(a) << std::endl;
-        std::cout << "b: " << std::bitset<32>(b) << std::endl;
-        std::cout << "c: " << std::bitset<32>(c) << std::endl;
-        std::cout << "d: " << std::bitset<32>(d) << std::endl;
-        std::cout << "e: " << std::bitset<32>(e) << std::endl;
-        std::cout << "f: " << std::bitset<32>(f) << std::endl;
-        std::cout << "g: " << std::bitset<32>(g) << std::endl;
-        std::cout << "h: " << std::bitset<32>(h) << std::endl << std::endl;*/
-
         for (int i = 0; i < 64; i++) {
             s1 = rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25);
             uint32_t ch = (e & f) ^ ((~e) & g);
-            /*if (i == 0) {
-                std::cout << "e & f: " << std::bitset<32>(e & f) << std::endl;
-                std::cout << "~e: " << std::bitset<32>(!e) << std::endl;
-                std::cout << "(~e) & g: " << std::bitset<32>((!e) & g) << std::endl;
-            }*/
-
 
             uint32_t temp1 = h + s1 + ch + k[i] + w[i];
             s0 = rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22);
@@ -136,54 +97,7 @@ void SHA256(std::string mes) {
             c = b;
             b = a;
             a = temp1 + temp2;
-            
-            /*if (i == 0) {
-                std::cout << "s1: " << std::bitset<32>(s1) << std::endl;
-                std::cout << "ch: " << std::bitset<32>(ch) << std::endl;
-                std::cout << "temp1: " << std::bitset<32>(temp1) << std::endl;
-                std::cout << "s0: " << std::bitset<32>(s0) << std::endl;
-                std::cout << "maj: " << std::bitset<32>(maj) << std::endl;
-                std::cout << "temp2: " << std::bitset<32>(temp2) << std::endl << std::endl;
-            
-                std::cout << "h: " << std::bitset<32>(h) << std::endl;
-                std::cout << "g: " << std::bitset<32>(g) << std::endl;
-                std::cout << "f: " << std::bitset<32>(f) << std::endl;
-                std::cout << "e: " << std::bitset<32>(e) << std::endl;
-                std::cout << "d: " << std::bitset<32>(d) << std::endl;
-                std::cout << "c: " << std::bitset<32>(c) << std::endl;
-                std::cout << "b: " << std::bitset<32>(b) << std::endl;
-                std::cout << "a: " << std::bitset<32>(a) << std::endl << std::endl;
-            }*/
-        }
-
-        /*std::cout << "h0: " << std::bitset<32>(h0) << std::endl;
-        std::cout << "h1: " << std::bitset<32>(h1) << std::endl;
-        std::cout << "h2: " << std::bitset<32>(h2) << std::endl;
-        std::cout << "h3: " << std::bitset<32>(h3) << std::endl;
-        std::cout << "h4: " << std::bitset<32>(h4) << std::endl;
-        std::cout << "h5: " << std::bitset<32>(h5) << std::endl;
-        std::cout << "h6: " << std::bitset<32>(h6) << std::endl;
-        std::cout << "h7: " << std::bitset<32>(h7) << std::endl << std::endl;*/
-
-        /*std::cout << "a: " << std::bitset<32>(a) << std::endl;
-        std::cout << "b: " << std::bitset<32>(b) << std::endl;
-        std::cout << "c: " << std::bitset<32>(c) << std::endl;
-        std::cout << "d: " << std::bitset<32>(d) << std::endl;
-        std::cout << "e: " << std::bitset<32>(e) << std::endl;
-        std::cout << "f: " << std::bitset<32>(f) << std::endl;
-        std::cout << "g: " << std::bitset<32>(g) << std::endl;
-        std::cout << "h: " << std::bitset<32>(h) << std::endl << std::endl;
-
-        printf("a: %x\n", a);
-        printf("b: %x\n", b);
-        printf("c: %x\n", c);
-        printf("d: %x\n", d);
-        printf("e: %x\n", e);
-        printf("f: %x\n", f);
-        printf("g: %x\n", g);
-        printf("h: %x\n\n", h);*/
-
-        
+        }     
         
         // 7 – Modify Final Values
         h0 = h0 + a;
@@ -194,24 +108,6 @@ void SHA256(std::string mes) {
         h5 = h5 + f;
         h6 = h6 + g;
         h7 = h7 + h;
-
-        /*printf("h0: %x\n", h0);
-        printf("h1: %x\n", h1);
-        printf("h2: %x\n", h2);
-        printf("h3: %x\n", h3);
-        printf("h4: %x\n", h4);
-        printf("h5: %x\n", h5);
-        printf("h6: %x\n", h6);
-        printf("h7: %x\n", h7);*/
-
-        /*std::cout << "h0: " << std::bitset<32>(h0) << std::endl;
-        std::cout << "h1: " << std::bitset<32>(h1) << std::endl;
-        std::cout << "h2: " << std::bitset<32>(h2) << std::endl;
-        std::cout << "h3: " << std::bitset<32>(h3) << std::endl;
-        std::cout << "h4: " << std::bitset<32>(h4) << std::endl;
-        std::cout << "h5: " << std::bitset<32>(h5) << std::endl;
-        std::cout << "h6: " << std::bitset<32>(h6) << std::endl;
-        std::cout << "h7: " << std::bitset<32>(h7) << std::endl << std::endl;*/
     }
 
     printf("Final Hash: %x%x%x%x%x%x%x%x", h0, h1, h2, h3, h4, h5, h6, h7);
@@ -221,11 +117,7 @@ void SHA256(std::string mes) {
 
 int main(){
     std::string message;
-    /*std::cout << "Message to hash: " << std::endl;
-    std::getline(std::cin, message);
 
-
-    std::cout << "Hashing ... " << std::endl;*/
     //message = "hello world";
     //message = "hello worldddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd";
     //message = "In the case of an infinitesimally small elastic sphere, the effect of a tidal force is to distort the shape of the body without any change in volume. The sphere becomes an ellipsoid with two bulges, pointing towards and away from the other body. Larger objects distort into an ovoid, and are slightly compressed, which is what happens to the Earth's oceans under the action of the Moon. The Earth and Moon rotate about their common center of mass or barycenter, and their gravitational attraction provides the centripetal force necessary to maintain this motion. To an observer on the Earth, very close to this barycenter, the situation is one of the Earth as body 1 acted upon by the gravity of the Moon as body 2. All parts of the Earth are subject to the Moon's gravitational forces, causing the water in the oceans to redistribute, forming bulges on the sides near the Moon and far from the Moon.";
