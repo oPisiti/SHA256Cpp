@@ -1,2 +1,2 @@
-# 3DObjects
-Rendering and rotating 3D objects contained in .stl files
+# SHA256 algorithm
+SHA256 implementation on C++.
