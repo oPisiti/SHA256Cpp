@@ -7,6 +7,8 @@
 #include <vector>
 #include <string>
 
+void read_to_string(const char* path, std::string& mes);
+
 int panic(std::string sMessage){
     std::cout << sMessage << std::endl;
     return 1;
@@ -153,7 +155,10 @@ int main(int argc, char* argv[]){
         // Getting the input into sMessage variable
         if(bInputIsFile){
             fInputFile.open(argv[i], std::ios::binary);
-            if(!fInputFile.is_open()) panic("Unable to open file\n");
+            if(!fInputFile.is_open()){
+                panic("Unable to open file\n");
+                return 1;
+            }
         }
         // else{
         //     sMessage = argv[i];
