@@ -1,15 +1,24 @@
-#include <iostream>
-#include <string>
 #include <bitset>
-#include <vector>
 #include <cmath>
+#include <cstring>
+#include <fstream> 
+#include <iostream>
+#include <vector>
+#include <string>
 
-uint32_t rightRotate(uint32_t num, int nTimes) {
+void read_to_string(const char* path, std::string& mes);
+
+int panic(std::string sMessage){
+    std::cout << sMessage << std::endl;
+    return 1;
+}
+
+inline uint32_t rightRotate(uint32_t num, int nTimes) {
     return (num >> nTimes) | (num << (sizeof(num) * 8 - nTimes));
 }
 
+// Based on https://qvault.io/cryptography/how-sha-2-works-step-by-step-sha-256/
 void SHA256(std::string mes) {
-    // Based on https://qvault.io/cryptography/how-sha-2-works-step-by-step-sha-256/
     uint64_t sizeMessageBits = mes.size() * 8;
     size_t sizeHash = ceil((sizeMessageBits + 64.0f) / 512) * 64;
     std::vector<unsigned char> hash;                                        // Each char is an 8 bit word
@@ -42,7 +51,7 @@ void SHA256(std::string mes) {
     uint32_t h6 = 0x1f83d9ab;
     uint32_t h7 = 0x5be0cd19;
 
-    // 3 – Initialize Round Constants (k)
+    // 3 - Initialize Round Constants (k)
     const uint32_t k[64] = {    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
                                 0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
                                 0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
@@ -52,10 +61,10 @@ void SHA256(std::string mes) {
                                 0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
                                 0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2};
 
-     // 4 – Chunk Loop
+     // 4 - Chunk Loop
     for (size_t chunk = 0; chunk < sizeHash / 64; chunk++) {
 
-        // 5 – Create Message Schedule (w)
+        // 5 - Create Message Schedule (w)
         uint32_t w[64];
      
         uint32_t j = chunk * 64;
@@ -69,7 +78,7 @@ void SHA256(std::string mes) {
             w[i] = w[i - 16] + s0 + w[i - 7] + s1;
         }
 
-        // 6 – Compression
+        // 6 - Compression
         uint32_t a = h0;
         uint32_t b = h1;
         uint32_t c = h2;
@@ -99,7 +108,7 @@ void SHA256(std::string mes) {
             a = temp1 + temp2;
         }     
         
-        // 7 – Modify Final Values
+        // 7 - Modify Final Values
         h0 = h0 + a;
         h1 = h1 + b;
         h2 = h2 + c;
@@ -110,17 +119,65 @@ void SHA256(std::string mes) {
         h7 = h7 + h;
     }
 
-    printf("%x%x%x%x%x%x%x%x", h0, h1, h2, h3, h4, h5, h6, h7);
+    printf("%x%x%x%x%x%x%x%x\n", h0, h1, h2, h3, h4, h5, h6, h7);
 
     //return hash;
 }
 
-int main(){
-    std::string message;
+int main(int argc, char* argv[]){
+    const std::string sUsage = "Usage: SHA256 [file] [-t text]";
+    if(argc < 2) panic(sUsage);
 
-    //message = "hello world";
-    //message = "hello worldddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd";
-    //message = "In the case of an infinitesimally small elastic sphere, the effect of a tidal force is to distort the shape of the body without any change in volume. The sphere becomes an ellipsoid with two bulges, pointing towards and away from the other body. Larger objects distort into an ovoid, and are slightly compressed, which is what happens to the Earth's oceans under the action of the Moon. The Earth and Moon rotate about their common center of mass or barycenter, and their gravitational attraction provides the centripetal force necessary to maintain this motion. To an observer on the Earth, very close to this barycenter, the situation is one of the Earth as body 1 acted upon by the gravity of the Moon as body 2. All parts of the Earth are subject to the Moon's gravitational forces, causing the water in the oceans to redistribute, forming bulges on the sides near the Moon and far from the Moon.";
-    message = "Maecenas lacus nulla, fermentum sed dapibus eget, aliquam id augue. In volutpat sit amet tortor quis auctor. Curabitur id sem vitae nisl pulvinar cursus. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Duis ligula dolor, laoreet ut turpis consectetur, tincidunt facilisis eros. Quisque vel tellus et lorem egestas volutpat eget eget tortor. Etiam blandit massa non viverra semper. Vestibulum et augue et lacus eleifend commodo. Phasellus mattis sed dui non commodo. Nam euismod volutpat lectus, a volutpat metus hendrerit eu. Cras arcu magna, vehicula eu lacus quis, accumsan congue velit. Curabitur volutpat eleifend nulla, gravida volutpat erat tincidunt eu. Aenean gravida purus non hendrerit elementum. Nam vitae dictum mi, quis semper diam. Donec commodo, turpis nec eleifend sagittis, dui quam aliquam risus, ut rhoncus mi enim vel velit.";
-    SHA256(message);
+    bool bInputIsFile = true;
+    std::string sMessage;
+
+    for(int i = 1; i < argc; i++){
+        sMessage.clear();
+
+        // Getting flags
+        if(strcmp(argv[i], "-") == 0){
+            panic(sUsage);
+        }
+        if(strcmp(argv[i], "-t") == 0){
+            bInputIsFile = false;
+            continue;
+        }
+
+        // Getting the input into sMessage variable
+        if(bInputIsFile) read_to_string(argv[i], sMessage);
+        else             sMessage = argv[i];
+
+        // Calling hash function
+        SHA256(sMessage);
+    }
+}
+
+void read_to_string(const char* path, std::string& mes){
+    std::ifstream fInputFile;
+    fInputFile.open(path);
+    if(!fInputFile.is_open()) panic("Unable to open file\n");
+
+    // Getting the file's size
+    const auto begin = fInputFile.tellg();
+    fInputFile.seekg(0, std::ios::end);
+    const auto end = fInputFile.tellg();
+    const auto fsize = (end-begin);
+
+    fInputFile.seekg (0, std::ios::beg);
+    // std::cout << "Size: " << fsize << std::endl;
+
+    // read() requires a C type string, a.k.a. char*
+    char* sBuffer = (char*)malloc(fsize);
+    if(sBuffer == NULL) panic("Insufficient memory.\n");
+    fInputFile.read(sBuffer, fsize);
+    
+    // Writing to mes
+    char* pTmp = sBuffer;
+    while(*pTmp != '\0'){
+        mes.push_back(*pTmp);
+        pTmp++;
+    }
+
+    fInputFile.close();
+    free(sBuffer);
 }
