@@ -3,55 +3,93 @@
 #include <cstring>
 #include <cstddef>
 #include <fstream> 
+#include <filesystem> 
 #include <iostream>
 #include <vector>
 #include <string>
 
-void read_to_string(const char* path, std::string& mes);
-
-int panic(std::string sMessage){
-    std::cout << sMessage << std::endl;
-    return 1;
-}
+// Base flags for keeping track of what has been done in previous chunks
+class ChunkFlags{
+    public:
+        bool bEOF = false;
+        bool bHaveAppended0x80 = false;
+        bool bHaveAppendedSize = false;
+};
 
 inline uint32_t rightRotate(uint32_t num, int nTimes) {
     return (num >> nTimes) | (num << (sizeof(num) * 8 - nTimes));
 }
 
+// Writes the next chunk into hash vector
+void getNextChunk(std::ifstream& fInputFile, const uint64_t iFileSizeInBytes, std::vector<std::byte>& hash, const uint64_t iHaveReadInBytes, ChunkFlags& cFlags){
+    // Reading file
+    int iCountBytesThisChunk = 0;
+    for (std::size_t i = 0; i < hash.size(); i++){
+        fInputFile.read(reinterpret_cast<char*>(&hash[i]), 1);
+
+        if(fInputFile.eof()){
+            cFlags.bEOF = true;
+            break;
+        }
+
+        iCountBytesThisChunk++;
+    }
+
+    // Padding
+    std::byte bFirstByte{0x80}, bZero{0x00};
+    if(iCountBytesThisChunk <= 63 && !cFlags.bHaveAppended0x80){
+        hash[iCountBytesThisChunk] = bFirstByte;
+        cFlags.bHaveAppended0x80 = true;
+        iCountBytesThisChunk++;
+    }
+    for (size_t i = iCountBytesThisChunk; i < hash.size(); i++){       // Setting all bits to 0
+        hash[i] = bZero; 
+    }
+
+    // Appending the file size
+    if(cFlags.bEOF && cFlags.bHaveAppended0x80 && iCountBytesThisChunk <= 56){
+        // How many relevant bits in iSizeFileInBits
+        const auto iSizeFileInBits = iFileSizeInBytes * 8;
+        unsigned iTMPSizeFileInBits, var = iSizeFileInBits;
+        for (iTMPSizeFileInBits = 0; var != 0; ++iTMPSizeFileInBits) var >>= 1;
+
+        // Adding file size to the end of chunk
+        auto itmp = iSizeFileInBits;
+    
+        for (std::size_t i = hash.size() - 1; i >= hash.size() - 8; i--){
+            if(itmp == 0){
+                hash[i] = (std::byte)0;
+            }
+            else{
+                hash[i] = (std::byte)itmp;
+                itmp >>= 8; 
+            }
+        }
+
+        // How many positions in hash array it will take to write iSizeFileInBits wholly
+        unsigned int charPositions = iTMPSizeFileInBits / 8 + 1;
+
+        // Writing the binary iSizeFileInBits into hash array. If iSizeFileInBits (binary) takes up more than 8 bits, the 9th onwards
+        // must be written in hash[-1] position. Done with bitshifting 8*i each time
+        for (int i = 0; i < charPositions; i++) hash[hash.size() - i - 1] = (std::byte)(iSizeFileInBits >> 8 * i) ;
+    
+        cFlags.bHaveAppendedSize = true;
+    }   
+
+}
+
 // Based on https://qvault.io/cryptography/how-sha-2-works-step-by-step-sha-256/
-void SHA256(std::ifstream& fInputFile) {
+// For reference: https://stepansnigirev.github.io/visual-sha256/
+void SHA256(std::ifstream& fInputFile){
     // Getting the file's size
-    const auto begin = fInputFile.tellg();
     fInputFile.seekg(0, std::ios::end);
-    const auto end = fInputFile.tellg();
-    const auto iFileSizeInBytes = (end-begin);
+    const auto iFileSizeInBytes = fInputFile.tellg();
     fInputFile.seekg(0, std::ios::beg);
 
     // Initializing variables
     const auto iSizeFileInBits = iFileSizeInBytes * 8;
-    size_t sizeHash = ceil((iSizeFileInBits + 64.0f) / 512) * 64;
-    std::vector<std::byte> hash;                                   // Each char is an 8 bit word
-    hash.reserve(sizeHash);   
-
-    std::byte bZero{0x00};
-    for (size_t i = 0; i < sizeHash; i++)  hash[i] = bZero;        // Setting all bits to 0
-
-    // 1 - Pre-processing
-    // https://codereview.stackexchange.com/questions/222021/read-file-into-vectorbyte
-    for (std::size_t i = 0; i < iFileSizeInBytes; i++) fInputFile.read(reinterpret_cast<char*>(&hash[i]), 1);
-    std::byte b0x80{0x80};
-    hash[iFileSizeInBytes] = b0x80;
-    
-    // How many relevant bits in iSizeFileInBits
-    unsigned iTMPSizeFileInBits, var = iSizeFileInBits;
-    for (iTMPSizeFileInBits = 0; var != 0; ++iTMPSizeFileInBits) var >>= 1;
-
-    // How many positions in hash array it will take to write iSizeFileInBits wholly
-    unsigned int charPositions = iTMPSizeFileInBits / 8 + 1;
-
-    // Writing the binary iSizeFileInBits into hash array. If iSizeFileInBits (binary) takes up more than 8 bits, the 9th onwards
-    // must be written in hash[-1] position. Done with bitshifting 8*i each time
-    for (int i = 0; i < charPositions; i++) hash[sizeHash - i - 1] = (std::byte)(iSizeFileInBits >> 8 * i) ;
+    size_t chunkSizeInBytes = 512 / 8;
+    std::vector<std::byte> hash(chunkSizeInBytes);                                   // Each char is an 8 bit word
 
     // 2 - Initialize Hash Values (h)
     uint32_t h0 = 0x6a09e667;
@@ -73,14 +111,20 @@ void SHA256(std::ifstream& fInputFile) {
                                 0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
                                 0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2};
 
-     // 4 - Chunk Loop
-    for (size_t chunk = 0; chunk < sizeHash / 64; chunk++) {
 
-        // 5 - Create Message Schedule (w)
-        uint32_t w[64];
-     
-        uint32_t j = chunk * 64;
-        for (size_t i = 0; i < 16; i++)   w[i] = ((uint32_t)hash[j + 4 * i] << 24) | ((uint32_t)hash[j + 4 * i + 1] << 16) | ((uint32_t)hash[j + 4 * i + 2] << 8) | (uint32_t)hash[j + 4 * i + 3];
+    // 5 - Declaring Message Schedule (w)
+    uint32_t w[64];
+
+    // 4 - Chunk Loop
+    ChunkFlags cFlags;
+    size_t chunk = 0;
+    while(!cFlags.bHaveAppendedSize){
+
+        // 1 - Pre-processing
+        getNextChunk(fInputFile, iFileSizeInBytes, hash, chunk * 64, cFlags);
+
+        // 5 - Defining Message Schedule (w) for this chunk  
+        for (size_t i = 0; i < 16; i++)   w[i] = ((uint32_t)hash[4 * i] << 24) | ((uint32_t)hash[4 * i + 1] << 16) | ((uint32_t)hash[4 * i + 2] << 8) | (uint32_t)hash[4 * i + 3];
         for (size_t i = 16; i < 64; i++)  w[i] = 0x00;              // Setting all other bits to 0
 
         uint32_t s0, s1;
@@ -129,6 +173,8 @@ void SHA256(std::ifstream& fInputFile) {
         h5 = h5 + f;
         h6 = h6 + g;
         h7 = h7 + h;
+
+        chunk++;
     }
 
     printf("%08x%08x%08x%08x%08x%08x%08x%08x\n", h0, h1, h2, h3, h4, h5, h6, h7);
@@ -137,15 +183,21 @@ void SHA256(std::ifstream& fInputFile) {
 
 int main(int argc, char* argv[]){
     const std::string sUsage = "Usage: SHA256 [file] [-t text]";
-    if(argc < 2) panic(sUsage);
+
+    if(argc < 2){
+        std::cout << sUsage << std::endl;
+        return 1;
+    }
 
     bool bInputIsFile = true;
     std::ifstream fInputFile;
 
+    // Hashing every argument
     for(int i = 1; i < argc; i++){
         // Setting flags
         if(strcmp(argv[i], "-") == 0){
-            panic(sUsage);
+            std::cout << sUsage << std::endl;
+            return 1;
         }
         if(strcmp(argv[i], "-t") == 0){
             bInputIsFile = false;
@@ -153,16 +205,17 @@ int main(int argc, char* argv[]){
         }
 
         // Getting the input into sMessage variable
-        if(bInputIsFile){
-            fInputFile.open(argv[i], std::ios::binary);
-            if(!fInputFile.is_open()){
-                panic("Unable to open file\n");
-                return 1;
-            }
-        }
+        if(bInputIsFile) fInputFile.open(argv[i], std::ios::binary);
+
+        // TODO: Deal with text input
         // else{
         //     sMessage = argv[i];
         // }
+
+        if(!fInputFile.is_open()){
+            std::cout << "Unable to open file" << std::endl;
+            return 1;
+        }
 
         // Calling hash function
         SHA256(fInputFile);
