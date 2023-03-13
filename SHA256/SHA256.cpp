@@ -3,7 +3,6 @@
 #include <cstring>
 #include <cstddef>
 #include <fstream> 
-#include <filesystem> 
 #include <iostream>
 #include <vector>
 #include <string>
@@ -189,8 +188,12 @@ int main(int argc, char* argv[]){
         return 1;
     }
 
+    // Stream in case the argument is a path
     bool bInputIsFile = true;
     std::ifstream fInputFile;
+
+    // Temporary file in case argument is a string
+    std::ofstream fOuputFile;
 
     // Hashing every argument
     for(int i = 1; i < argc; i++){
@@ -204,17 +207,30 @@ int main(int argc, char* argv[]){
             continue;
         }
 
+        std::string sFileName;
         // Getting the input into sMessage variable
-        if(bInputIsFile) fInputFile.open(argv[i], std::ios::binary);
+        if(bInputIsFile) {
+            sFileName = argv[i];
+            fInputFile.open(sFileName, std::ios::binary);           
+        }
+        else{            
+            sFileName = "output.tmp";
+            fOuputFile.open(sFileName, std::ios::trunc);
 
-        // TODO: Deal with text input
-        // else{
-        //     sMessage = argv[i];
-        // }
+            if(!fOuputFile.is_open()){
+                std::cout << "Unable create tmp file " << sFileName << std::endl;
+                return 1;
+            }
+
+            fOuputFile << argv[i];
+
+            fOuputFile.close();
+            fInputFile.open(sFileName, std::ios::binary); 
+        }
 
         if(!fInputFile.is_open()){
-            std::cout << "Unable to open file" << std::endl;
-            return 1;
+                std::cout << "Unable to open file " << sFileName << std::endl;
+                return 1;
         }
 
         // Calling hash function
@@ -222,5 +238,6 @@ int main(int argc, char* argv[]){
 
         // Clean up
         fInputFile.close();
+
     }
 }
